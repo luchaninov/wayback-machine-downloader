@@ -196,6 +196,10 @@ Then, you should be able to use the Docker image to download websites. For examp
 
     docker run --rm -it -v $PWD/websites:/websites hartator/wayback-machine-downloader http://example.com
 
+Remove Docker image may be outdated. Stay on the edge, build it by yourself:
+
+    docker build -t hartator/wayback-machine-downloader .
+
 ## Browse the local copy
 
 Now you have downloaded a local copy of a website from the archive.  If it does not properly load or display in your browser, most likely wrong absolute URLs are part of the problem.  That means, the HTML files reference - for example - a stylesheet at the location it was once hosted (like `https://yourolddomaincontent.com/style.css`).  To have the page served from your local copy, these URLs have to be rewritten to refer to the local content (like `style.css`)
