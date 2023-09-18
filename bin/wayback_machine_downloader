@@ -21,7 +21,7 @@ option_parser = OptionParser.new do |opts|
   opts.on("-s", "--all-timestamps", "Download all snapshots/timestamps for a given website") do |t|
     options[:all_timestamps] = true
   end
-  
+
   opts.on("-f", "--from TIMESTAMP", Integer, "Only files on or after timestamp supplied (ie. 20060716231334)") do |t|
     options[:from_timestamp] = t
   end
@@ -30,7 +30,7 @@ option_parser = OptionParser.new do |opts|
     options[:to_timestamp] = t
   end
 
-  opts.on("-e", "--exact-url", "Download only the url provied and not the full site") do |t|
+  opts.on("-e", "--exact-url", "Download only the url provided and not the full site") do |t|
     options[:exact_url] = t
   end
 
@@ -56,6 +56,10 @@ option_parser = OptionParser.new do |opts|
 
   opts.on("-l", "--list", "Only list file urls in a JSON format with the archived timestamps, won't download anything") do |t|
     options[:list] = true
+  end
+
+  opts.on("-u", "--user-agent STRING", String, "UserAgent for connection (Default is Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0)") do |t|
+    options[:user_agent] = t
   end
 
   opts.on("-v", "--version", "Display version") do |t|

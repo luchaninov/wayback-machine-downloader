@@ -6,6 +6,7 @@ require 'open-uri'
 require 'fileutils'
 require 'cgi'
 require 'json'
+require 'time'
 require_relative 'wayback_machine_downloader/tidy_bytes'
 require_relative 'wayback_machine_downloader/to_regex'
 require_relative 'wayback_machine_downloader/archive_api'
@@ -17,8 +18,8 @@ class WaybackMachineDownloader
   VERSION = "2.3.1"
 
   attr_accessor :base_url, :exact_url, :directory, :all_timestamps,
-    :from_timestamp, :to_timestamp, :only_filter, :exclude_filter, 
-    :all, :maximum_pages, :threads_count
+    :from_timestamp, :to_timestamp, :only_filter, :exclude_filter,
+    :all, :maximum_pages, :threads_count, :user_agent
 
   def initialize params
     @base_url = params[:base_url]
@@ -31,6 +32,7 @@ class WaybackMachineDownloader
     @exclude_filter = params[:exclude_filter]
     @all = params[:all]
     @maximum_pages = params[:maximum_pages] ? params[:maximum_pages].to_i : 100
+    @user_agent = params[:user_agent] ? params[:user_agent] : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0"
     @threads_count = params[:threads_count].to_i
   end
 
@@ -105,7 +107,7 @@ class WaybackMachineDownloader
     get_all_snapshots_to_consider.each do |file_timestamp, file_url|
       next unless file_url.include?('/')
       file_id = file_url.split('/')[3..-1].join('/')
-      file_id = CGI::unescape file_id 
+      file_id = CGI::unescape file_id
       file_id = file_id.tidy_bytes unless file_id == ""
       if file_id.nil?
         puts "Malformed file url, ignoring: #{file_url}"
@@ -132,9 +134,9 @@ class WaybackMachineDownloader
       next unless file_url.include?('/')
       file_id = file_url.split('/')[3..-1].join('/')
       file_id_and_timestamp = [file_timestamp, file_id].join('/')
-      file_id_and_timestamp = CGI::unescape file_id_and_timestamp 
+      file_id_and_timestamp = CGI::unescape file_id_and_timestamp
       file_id_and_timestamp = file_id_and_timestamp.tidy_bytes unless file_id_and_timestamp == ""
-      if file_id.nil?
+      if file_id_and_timestamp.nil?
         puts "Malformed file url, ignoring: #{file_url}"
       else
         if match_exclude_filter(file_url)
@@ -199,7 +201,7 @@ class WaybackMachineDownloader
       puts "\t* Exclude filter too wide (#{exclude_filter.to_s})" if @exclude_filter
       return
     end
- 
+
     puts "#{file_list_by_timestamp.count} files to download:"
 
     threads = []
@@ -249,6 +251,7 @@ class WaybackMachineDownloader
     file_id = file_remote_info[:file_id]
     file_timestamp = file_remote_info[:timestamp]
     file_path_elements = file_id.split('/')
+    original_file_mtime = nil
     if file_id == ""
       dir_path = backup_path
       file_path = backup_path + 'index.html'
@@ -268,8 +271,11 @@ class WaybackMachineDownloader
         structure_dir_path dir_path
         open(file_path, "wb") do |file|
           begin
-            URI("https://web.archive.org/web/#{file_timestamp}id_/#{file_url}").open("Accept-Encoding" => "plain") do |uri|
+            open("https://web.archive.org/web/#{file_timestamp}id_/#{file_url}", "Accept-Encoding" => "plain", "User-Agent" => @user_agent) do |uri|
               file.write(uri.read)
+              if uri.meta.has_key?("x-archive-orig-last-modified")
+                original_file_mtime = Time.parse(uri.meta["x-archive-orig-last-modified"])
+              end
             end
           rescue OpenURI::HTTPError => e
             puts "#{file_url} # #{e}"
@@ -280,6 +286,9 @@ class WaybackMachineDownloader
           rescue StandardError => e
             puts "#{file_url} # #{e}"
           end
+        end
+        if not original_file_mtime.nil?
+            File.utime(File.atime(file_path), original_file_mtime, file_path)
         end
       rescue StandardError => e
         puts "#{file_url} # #{e}"

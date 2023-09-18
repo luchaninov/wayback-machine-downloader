@@ -47,6 +47,7 @@ It will download the last version of every file present on Wayback Machine to `.
 	    -p, --maximum-snapshot NUMBER    Maximum snapshot pages to consider (Default is 100)
 					     Count an average of 150,000 snapshots per page
 	    -l, --list                       Only list file urls in a JSON format with the archived timestamps, won't download anything
+	    -u, --user-agent STRING          UserAgent for connection (Default is Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0)
 	    
 ## Specify directory to save files to
 
@@ -157,13 +158,13 @@ Example:
 
 ## Maximum number of snapshot pages to consider
 
-    -p, --snapshot-pages NUMBER    
+    -p, --maximum-snapshot NUMBER
 
 Optional. Specify the maximum number of snapshot pages to consider. Count an average of 150,000 snapshots per page. 100 is the default maximum number of snapshot pages and should be sufficient for most websites. Use a bigger number if you want to download a very large website.
 
 Example:
 
-    wayback_machine_downloader http://example.com --snapshot-pages 300    
+    wayback_machine_downloader http://example.com --maximum-snapshot 300    
 
 ## Download multiple files at a time
 
@@ -175,6 +176,16 @@ Example:
 
     wayback_machine_downloader http://example.com --concurrency 20
 
+## Specify UserAgent for connection
+
+     -u, --user-agent STRING
+
+UserAgent for connection (Default is Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0)
+
+Example:
+
+    wayback_machine_downloader http://example.com --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"
+
 ## Using the Docker image
 
 As an alternative installation way, we have a Docker image! Retrieve the wayback-machine-downloader Docker image this way:
@@ -184,6 +195,24 @@ As an alternative installation way, we have a Docker image! Retrieve the wayback
 Then, you should be able to use the Docker image to download websites. For example:
 
     docker run --rm -it -v $PWD/websites:/websites hartator/wayback-machine-downloader http://example.com
+
+## Browse the local copy
+
+Now you have downloaded a local copy of a website from the archive.  If it does not properly load or display in your browser, most likely wrong absolute URLs are part of the problem.  That means, the HTML files reference - for example - a stylesheet at the location it was once hosted (like `https://yourolddomaincontent.com/style.css`).  To have the page served from your local copy, these URLs have to be rewritten to refer to the local content (like `style.css`)
+
+While [a feature request (#26) exists](https://github.com/hartator/wayback-machine-downloader/issues/26), no one implemented it yet.
+
+If you work on a unixoid system, following `sed` command might help you for starters.  The example assumes that the refered domain is `https://yourolddomaincontent.com` and stored in the directory `websites`:
+
+    grep --recursive --files-with-matches 'yourolddomaincontent.com' websites | xargs sed --in-place 's|https\?://yourolddomaincontent.com||g'
+
+Or, with short options:
+
+    grep -rl 'yourolddomaincontent.com' websites | xargs sed -i 's|https\?://yourolddomaincontent.com||g'
+
+However, you might find, that also subdomains like `www.yourolddomaincontent.com` or even URLs with port-information like `www.yourolddomaincontent.com:80` are used.  In that case, adjust the sed call appropriately.
+
+You might still achieve better results when serving the files via a web server than to open them directly with your browser, the list of commands at https://gist.github.com/willurd/5720255 might be a good start to evaluate your options.
 
 ## Contributing
 
